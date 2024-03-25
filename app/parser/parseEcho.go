@@ -7,5 +7,5 @@ func ParseEcho(buf []byte) []byte {
 	msg := string(buf[4 : 4+arglength])
 	// response := "$" + string(arglength) + "\r\n" + string(msg) + "\r\n"
 
-	return []byte(fmt.Sprintf("$%d\r\n%v\r\n", arglength, msg))
+	return []byte(fmt.Sprintf("$%d\r\n%s\r\n", arglength, msg))
 }
