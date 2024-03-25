@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-var storage map[string]string
+var storage map[string]string = make(map[string]string)
 
 func ParseSet(buf []byte) []byte {
 	keylength := buf[1] - '0'
