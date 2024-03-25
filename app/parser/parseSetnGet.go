@@ -9,10 +9,10 @@ var storage map[string]string = make(map[string]string)
 func ParseSet(buf []byte) []byte {
 	keylength := buf[1] - '0'
 
-	valuelength := buf[8+keylength] - '0'
+	valuelength := buf[7+keylength] - '0'
 
 	key := buf[4 : 4+keylength]
-	value := buf[9+keylength : 9+keylength+valuelength]
+	value := buf[10+keylength : 10+keylength+valuelength]
 
 	storage[string(key)] = string(value)
 
