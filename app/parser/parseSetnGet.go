@@ -12,7 +12,7 @@ func ParseSet(buf []byte) []byte {
 	valuelength := buf[8+keylength] - '0'
 
 	key := buf[4 : 4+keylength]
-	value := buf[10+keylength : 10+keylength+valuelength]
+	value := buf[9+keylength : 9+keylength+valuelength]
 
 	storage[string(key)] = string(value)
 
