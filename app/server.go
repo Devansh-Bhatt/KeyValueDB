@@ -8,12 +8,19 @@ import (
 )
 
 func handleconn(conn net.Conn) {
+	defer conn.Close()
 	pong := "+PONG\r\n"
-	_, err := conn.Write([]byte(pong))
-	if err != nil {
-		fmt.Println("Could not write to the client")
-		os.Exit(1)
+	conn.Write([]byte(pong))
+	for {
+		buf := make([]byte, 124)
+		_, err := conn.Read(buf)
+		if err != nil {
+			fmt.Println("Could not read the client messagex")
+		}
+		pong := "+PONG\r\n"
+		conn.Write([]byte(pong))
 	}
+
 }
 
 func main() {
@@ -33,8 +40,6 @@ func main() {
 		fmt.Println("Error accepting connection: ", err.Error())
 		os.Exit(1)
 	}
-	for {
-		go handleconn(conn)
-	}
+	handleconn(conn)
 
 }
