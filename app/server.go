@@ -5,6 +5,8 @@ import (
 	// Uncomment this block to pass the first stage
 	"net"
 	"os"
+
+	"github.com/codecrafters-io/redis-starter-go/app/parser"
 )
 
 func handleconn(conn net.Conn) {
@@ -17,8 +19,8 @@ func handleconn(conn net.Conn) {
 		if err != nil {
 			fmt.Println("Could not read the client messagex")
 		}
-		pong := "+PONG\r\n"
-		conn.Write([]byte(pong))
+		response := parser.MainParser(buf)
+		conn.Write(response)
 	}
 
 }
