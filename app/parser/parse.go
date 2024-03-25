@@ -37,6 +37,10 @@ func parseArrays(buf []byte) []byte {
 
 	if strings.ToLower(string(command)) == "echo" {
 		return ParseEcho(buf[10+commlength:])
+	} else if strings.ToLower(string(command)) == "set" {
+		return ParseSet(buf[10+commlength:])
+	} else if strings.ToLower(string(command)) == "get" {
+		return ParseGet(buf[10+commlength:])
 	} else {
 		return []byte("+PONG\r\n")
 	}
