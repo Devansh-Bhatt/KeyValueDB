@@ -9,8 +9,8 @@ import (
 
 func handleconn(conn net.Conn) {
 	defer conn.Close()
-	pong := "+PONG\r\n"
-	conn.Write([]byte(pong))
+	// pong := "+PONG\r\n"
+	// conn.Write([]byte(pong))
 	for {
 		buf := make([]byte, 124)
 		_, err := conn.Read(buf)
