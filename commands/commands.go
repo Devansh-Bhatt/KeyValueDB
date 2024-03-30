@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/codecrafters-io/redis-starter-go/resp"
 	. "github.com/codecrafters-io/redis-starter-go/resp"
@@ -49,8 +50,17 @@ func Set(db *Db, args []Value) Value {
 			Str: "OK",
 		}
 	case 4:
-		expiry := args[3].Num
-		db.Set(key, []byte(val), expiry)
+		expiry := args[3].Bulk
+
+		conv, err := strconv.ParseInt(expiry, 10, 64)
+
+		if err != nil {
+			return Value{
+				Typ: ErrorType,
+				Err: "Wrong arguments",
+			}
+		}
+		db.Set(key, []byte(val), conv)
 		return Value{
 			Typ: StringType,
 			Str: "OK",
