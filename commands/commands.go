@@ -21,6 +21,13 @@ var Handlers = map[string]func(*Db, []Value) Value{
 
 // )
 
+func Ping(db *Db, args []Value) Value {
+	return Value{
+		Typ: StringType,
+		Str: "PONG",
+	}
+}
+
 func Echo(db *Db, args []Value) Value {
 	return Value{
 		Typ:  BulkStringType,
