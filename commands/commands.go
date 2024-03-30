@@ -12,6 +12,7 @@ var Handlers = map[string]func(*Db, []Value) Value{
 	"echo": Echo,
 	"set":  Set,
 	"get":  Get,
+	"ping": Ping,
 }
 
 // const (
