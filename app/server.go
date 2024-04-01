@@ -63,7 +63,7 @@ func main() {
 	flag.Parse()
 
 	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
-	Redis := redis.NewRedis(l)
+	Redis := redis.NewRedis()
 	if err != nil {
 		fmt.Printf("Failed to bind to port %d", port)
 		os.Exit(1)

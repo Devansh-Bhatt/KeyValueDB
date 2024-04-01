@@ -2,14 +2,12 @@ package redis
 
 import (
 	"fmt"
-	"net"
 
 	"github.com/codecrafters-io/redis-starter-go/resp"
 	"github.com/codecrafters-io/redis-starter-go/store"
 )
 
 type Redis struct {
-	listener  net.Listener
 	store     store.Db
 	repl_info ReplicationInfostruct
 }
@@ -45,10 +43,9 @@ type ReplicationInfostruct struct {
 
 }
 
-func NewRedis(list net.Listener) *Redis {
+func NewRedis() *Redis {
 	return &Redis{
-		listener: list,
-		store:    *store.NewDb(),
+		store: *store.NewDb(),
 		repl_info: ReplicationInfostruct{
 			role: "master",
 		},
