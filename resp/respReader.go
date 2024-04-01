@@ -96,7 +96,7 @@ func (r *Resp) parseArrays() (Value, error) {
 		return v, err
 	}
 
-	length, err := strconv.ParseInt(string(line[0]), 10, 32)
+	length, err := strconv.ParseInt(string(line), 10, 32)
 	// fmt.Println("length: %d", length)
 	if err != nil {
 		return v, err
@@ -127,7 +127,7 @@ func (r *Resp) parseBulk() (Value, error) {
 	if err != nil {
 		return v, err
 	}
-	length, err := strconv.ParseInt(string(line[0]), 10, 32)
+	length, err := strconv.ParseInt(string(line), 10, 32)
 	if err != nil {
 		return v, err
 	}
