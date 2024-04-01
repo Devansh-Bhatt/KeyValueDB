@@ -8,7 +8,7 @@ import (
 )
 
 type Redis struct {
-	store     store.Db
+	Store     store.Db
 	repl_info ReplicationInfostruct
 }
 
@@ -45,7 +45,7 @@ type ReplicationInfostruct struct {
 
 func NewRedis() *Redis {
 	return &Redis{
-		store: *store.NewDb(),
+		Store: *store.NewDb(),
 		repl_info: ReplicationInfostruct{
 			role: "master",
 		},

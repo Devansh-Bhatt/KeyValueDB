@@ -11,7 +11,6 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/commands"
 	"github.com/codecrafters-io/redis-starter-go/redis"
 	"github.com/codecrafters-io/redis-starter-go/resp"
-	"github.com/codecrafters-io/redis-starter-go/store"
 )
 
 func handleconn(conn net.Conn, redis *redis.Redis) {
@@ -20,7 +19,6 @@ func handleconn(conn net.Conn, redis *redis.Redis) {
 	fmt.Println("Connected")
 	respHandler := resp.NewRespHandler(conn)
 	respWriter := resp.NewRespWriter(conn)
-	clientDb := store.NewDb()
 	for {
 		value, err := respHandler.ParseAny()
 		if err == io.EOF {
@@ -37,7 +35,7 @@ func handleconn(conn net.Conn, redis *redis.Redis) {
 			Comm := Reqargs[0].Bulk
 			// fmt.Println(Comm)
 			Comm_Args := Reqargs[1:]
-			respValue := commands.Handlers[strings.ToLower(Comm)](clientDb, Comm_Args)
+			respValue := commands.Handlers[strings.ToLower(Comm)](redis, Comm_Args)
 			respWriter.Write(respValue)
 		case resp.StringType:
 			switch strings.ToLower(value.Str) {

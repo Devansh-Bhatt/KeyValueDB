@@ -3,17 +3,19 @@ package commands
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
+	"github.com/codecrafters-io/redis-starter-go/redis"
 	"github.com/codecrafters-io/redis-starter-go/resp"
 	. "github.com/codecrafters-io/redis-starter-go/resp"
-	. "github.com/codecrafters-io/redis-starter-go/store"
 )
 
-var Handlers = map[string]func(*Db, []Value) Value{
+var Handlers = map[string]func(*redis.Redis, []Value) Value{
 	"echo": Echo,
 	"set":  Set,
 	"get":  Get,
 	"ping": Ping,
+	"info": Info,
 }
 
 // const (
@@ -23,27 +25,27 @@ var Handlers = map[string]func(*Db, []Value) Value{
 
 // )
 
-func Ping(db *Db, args []Value) Value {
+func Ping(redis *redis.Redis, args []Value) Value {
 	return Value{
 		Typ: StringType,
 		Str: "PONG",
 	}
 }
 
-func Echo(db *Db, args []Value) Value {
+func Echo(redis *redis.Redis, args []Value) Value {
 	return Value{
 		Typ:  BulkStringType,
 		Bulk: args[0].Bulk,
 	}
 }
 
-func Set(db *Db, args []Value) Value {
+func Set(redis *redis.Redis, args []Value) Value {
 	key := args[0].Bulk
 	val := args[1].Bulk
 
 	switch len(args) {
 	case 2:
-		db.Set(key, []byte(val), -1)
+		redis.Store.Set(key, []byte(val), -1)
 
 		return Value{
 			Typ: StringType,
@@ -60,7 +62,7 @@ func Set(db *Db, args []Value) Value {
 				Err: "Wrong arguments",
 			}
 		}
-		db.Set(key, []byte(val), conv)
+		redis.Store.Set(key, []byte(val), conv)
 		return Value{
 			Typ: StringType,
 			Str: "OK",
@@ -73,9 +75,9 @@ func Set(db *Db, args []Value) Value {
 	}
 }
 
-func Get(db *Db, args []Value) resp.Value {
+func Get(redis *redis.Redis, args []Value) resp.Value {
 	fmt.Println("reached Get")
-	val, err := db.Get(args[0].Bulk)
+	val, err := redis.Store.Get(args[0].Bulk)
 
 	if err != nil {
 		return Value{
@@ -86,4 +88,17 @@ func Get(db *Db, args []Value) resp.Value {
 		Typ:  BulkStringType,
 		Bulk: string(val),
 	}
+}
+
+func Info(redis *redis.Redis, args []Value) resp.Value {
+	SubComm := strings.ToLower(args[0].Bulk)
+	switch SubComm {
+	case "replication":
+		return redis.GetInfo()
+	default:
+		return Value{
+			Typ: NULLType,
+		}
+	}
+
 }
