@@ -3,16 +3,18 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/commands"
+	"github.com/codecrafters-io/redis-starter-go/redis"
 	"github.com/codecrafters-io/redis-starter-go/resp"
 	"github.com/codecrafters-io/redis-starter-go/store"
 )
 
-func handleconn(conn net.Conn) {
+func handleconn(conn net.Conn, redis *redis.Redis) {
 	defer conn.Close()
 
 	fmt.Println("Connected")
@@ -21,6 +23,9 @@ func handleconn(conn net.Conn) {
 	clientDb := store.NewDb()
 	for {
 		value, err := respHandler.ParseAny()
+		if err == io.EOF {
+			continue
+		}
 		fmt.Println(value)
 		if err != nil {
 			fmt.Println("From Here", err)
@@ -58,6 +63,7 @@ func main() {
 	flag.Parse()
 
 	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
+	Redis := redis.NewRedis(l)
 	if err != nil {
 		fmt.Printf("Failed to bind to port %d", port)
 		os.Exit(1)
@@ -68,7 +74,7 @@ func main() {
 			fmt.Println("Error accepting connection: ", err.Error())
 			os.Exit(1)
 		}
-		go handleconn(conn)
+		go handleconn(conn, Redis)
 	}
 
 }
