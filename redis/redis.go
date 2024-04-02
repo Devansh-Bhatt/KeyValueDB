@@ -2,6 +2,7 @@ package redis
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/codecrafters-io/redis-starter-go/resp"
 	"github.com/codecrafters-io/redis-starter-go/store"
@@ -11,6 +12,10 @@ import (
 type Redis struct {
 	Store     store.Db
 	repl_info ReplicationInfo
+}
+
+type RedisSlave struct {
+	Redis
 }
 
 type ReplicationInfo struct {
@@ -55,15 +60,27 @@ func NewRedisMaster() *Redis {
 	}
 }
 
-func NewRedisSlave() *Redis {
-	return &Redis{
-		Store: *store.NewDb(),
-		repl_info: ReplicationInfo{
-			role:               "slave",
-			master_replid:      util.Randomalphanumericgenerator(40),
-			master_repl_offset: 0,
-		},
+func NewRedisSlave() *RedisSlave {
+	return &RedisSlave{
+		Redis{Store: *store.NewDb(),
+			repl_info: ReplicationInfo{
+				role:               "slave",
+				master_replid:      util.Randomalphanumericgenerator(40),
+				master_repl_offset: 0,
+			}},
 	}
+}
+
+func (rs *RedisSlave) ConnectMaster(Master string, port string) (net.Conn, error) {
+	MasterAddr := fmt.Sprintf("%s:%s", Master, port)
+
+	conn, err := net.Dial("tcp", MasterAddr)
+
+	if err != nil {
+		fmt.Println("couldnt not connect to master")
+	}
+
+	return conn, nil
 }
 
 func (redis *Redis) GetInfo() resp.Value {
