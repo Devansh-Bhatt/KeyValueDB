@@ -9,10 +9,10 @@ import (
 
 type Redis struct {
 	Store     store.Db
-	repl_info ReplicationInfostruct
+	repl_info ReplicationInfo
 }
 
-type ReplicationInfostruct struct {
+type ReplicationInfo struct {
 	role string
 	// "master" - if the instance is replica of noone
 	// "slave"  - if the intsance is a replica of some master instances
@@ -43,11 +43,20 @@ type ReplicationInfostruct struct {
 
 }
 
-func NewRedis() *Redis {
+func NewRedisMaster() *Redis {
 	return &Redis{
 		Store: *store.NewDb(),
-		repl_info: ReplicationInfostruct{
+		repl_info: ReplicationInfo{
 			role: "master",
+		},
+	}
+}
+
+func NewRedisSlave() *Redis {
+	return &Redis{
+		Store: *store.NewDb(),
+		repl_info: ReplicationInfo{
+			role: "slave",
 		},
 	}
 }

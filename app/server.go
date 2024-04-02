@@ -56,12 +56,17 @@ func handleconn(conn net.Conn, redis *redis.Redis) {
 func main() {
 	fmt.Println("Logs from your program will appear here!")
 	var port int
-
+	var replicaof string
+	var Redis *redis.Redis
 	flag.IntVar(&port, "port", 6379, "Start Server on : ")
+	flag.StringVar(&replicaof, "replicaof", "", "Host Ip and Port")
 	flag.Parse()
 
 	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
-	Redis := redis.NewRedis()
+	if len(strings.TrimSpace(replicaof)) != 0 {
+		Redis = redis.NewRedisSlave()
+	}
+	Redis = redis.NewRedisMaster()
 	if err != nil {
 		fmt.Printf("Failed to bind to port %d", port)
 		os.Exit(1)
