@@ -57,12 +57,12 @@ func main() {
 	flag.IntVar(&port, "port", 6379, "Start Server on : ")
 	flag.StringVar(&replicaof, "replicaof", "", "Host Ip and Port")
 	flag.Parse()
-
-	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
 	if len(strings.TrimSpace(replicaof)) != 0 {
 		Redis = redis.NewRedisSlave()
+	} else {
+		Redis = redis.NewRedisMaster()
 	}
-	Redis = redis.NewRedisMaster()
+	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
 	if err != nil {
 		fmt.Printf("Failed to bind to port %d", port)
 		os.Exit(1)
