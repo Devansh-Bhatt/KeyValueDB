@@ -25,15 +25,11 @@ func handleconn(conn net.Conn, redis *redis.Redis) {
 			continue
 		}
 		fmt.Println(value)
-		if err != nil {
-			fmt.Println("From Here", err)
-		}
 		switch value.Typ {
 		case resp.ArrayType:
 
 			Reqargs := value.Array
 			Comm := Reqargs[0].Bulk
-			// fmt.Println(Comm)
 			Comm_Args := Reqargs[1:]
 			respValue := commands.Handlers[strings.ToLower(Comm)](redis, Comm_Args)
 			respWriter.Write(respValue)
