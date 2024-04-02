@@ -63,7 +63,6 @@ func main() {
 		MasterPort := flag.Args()[0]
 		RedisSlave = redis.NewRedisSlave()
 		conn, err := RedisSlave.ConnectMaster(Master, MasterPort)
-		// respwriter := resp.NewRespWriter(conn)
 		if err != nil {
 			fmt.Printf(err.Error())
 		}
