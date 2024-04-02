@@ -91,3 +91,12 @@ func (redis *Redis) GetInfo() resp.Value {
 		Bulk: s,
 	}
 }
+
+func (rs *RedisSlave) GetInfo() resp.Value {
+	s := fmt.Sprintf("role:%s\n master_replid:%s\n master_repl_offset:%d", rs.repl_info.role, rs.repl_info.master_replid, rs.repl_info.master_repl_offset)
+
+	return resp.Value{
+		Typ:  resp.BulkStringType,
+		Bulk: s,
+	}
+}
