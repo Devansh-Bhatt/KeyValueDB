@@ -5,6 +5,7 @@ import (
 
 	"github.com/codecrafters-io/redis-starter-go/resp"
 	"github.com/codecrafters-io/redis-starter-go/store"
+	"github.com/codecrafters-io/redis-starter-go/util"
 )
 
 type Redis struct {
@@ -47,7 +48,9 @@ func NewRedisMaster() *Redis {
 	return &Redis{
 		Store: *store.NewDb(),
 		repl_info: ReplicationInfo{
-			role: "master",
+			role:               "master",
+			master_replid:      util.Randomalphanumericgenerator(40),
+			master_repl_offset: 0,
 		},
 	}
 }
@@ -56,13 +59,15 @@ func NewRedisSlave() *Redis {
 	return &Redis{
 		Store: *store.NewDb(),
 		repl_info: ReplicationInfo{
-			role: "slave",
+			role:               "slave",
+			master_replid:      util.Randomalphanumericgenerator(40),
+			master_repl_offset: 0,
 		},
 	}
 }
 
 func (redis *Redis) GetInfo() resp.Value {
-	s := fmt.Sprintf("role:%s", redis.repl_info.role)
+	s := fmt.Sprintf("role:%s\n master_replid:%s\n master_repl_offset:%d", redis.repl_info.role, redis.repl_info.master_replid, redis.repl_info.master_repl_offset)
 
 	return resp.Value{
 		Typ:  resp.BulkStringType,
