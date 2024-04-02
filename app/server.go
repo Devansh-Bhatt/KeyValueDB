@@ -11,7 +11,6 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/commands"
 	"github.com/codecrafters-io/redis-starter-go/redis"
 	"github.com/codecrafters-io/redis-starter-go/resp"
-	"github.com/codecrafters-io/redis-starter-go/test"
 )
 
 func handleconn(conn net.Conn, redis *redis.Redis) {
@@ -63,7 +62,6 @@ func main() {
 		Master := replicaof
 		MasterPort := flag.Args()[0]
 		RedisSlave = redis.NewRedisSlave()
-
 		conn, err := RedisSlave.ConnectMaster(Master, MasterPort)
 		// respwriter := resp.NewRespWriter(conn)
 		if err != nil {
@@ -80,7 +78,7 @@ func main() {
 		fmt.Printf("Failed to bind to port %d", port)
 		os.Exit(1)
 	}
-	go test.Test()
+	// go test.Test()
 	for {
 		conn, err := l.Accept()
 		if err != nil {
