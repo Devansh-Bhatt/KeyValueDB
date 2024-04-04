@@ -18,6 +18,7 @@ const (
 	ArrayType      = "Array"
 	NULLType       = "NULL"
 	ErrorType      = "Error"
+	RDBType        = "RDB"
 )
 
 type Value struct {
@@ -26,6 +27,7 @@ type Value struct {
 	Str   string
 	Num   int64
 	Bulk  string
+	Bytes []byte
 	Array []Value
 }
 

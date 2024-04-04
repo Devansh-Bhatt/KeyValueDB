@@ -43,6 +43,9 @@ func handleconn(conn net.Conn, redis *redis.Redis) {
 			Comm_Args := Reqargs[1:]
 			respValue := commands.Handlers[strings.ToLower(Comm)](redis, Comm_Args)
 			respWriter.Write(respValue)
+			if strings.ToLower(Comm) == "psync" {
+				respWriter.Write(commands.SendEmptyRDb(redis))
+			}
 		case resp.StringType:
 			switch strings.ToLower(value.Str) {
 			case "ping":
@@ -98,6 +101,7 @@ func main() {
 		if err != nil {
 			fmt.Println("Error Reading from connection")
 		}
+
 	} else {
 		RedisServer = redis.NewRedisServer(isSlave)
 	}

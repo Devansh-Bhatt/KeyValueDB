@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/codecrafters-io/redis-starter-go/resp"
@@ -69,5 +70,18 @@ func (redis *Redis) GetInfo() resp.Value {
 	return resp.Value{
 		Typ:  resp.BulkStringType,
 		Bulk: s,
+	}
+}
+
+func (redis *Redis) FullResync() resp.Value {
+	HexContent := "524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2"
+	Bin, err := hex.DecodeString(HexContent)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	return resp.Value{
+		Typ:   resp.RDBType,
+		Bytes: Bin,
 	}
 }

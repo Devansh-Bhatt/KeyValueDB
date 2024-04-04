@@ -42,6 +42,8 @@ func (v Value) MarshalAny() []byte {
 		return v.MarshalNull()
 	case ErrorType:
 		return v.MarshalError()
+	case RDBType:
+		return v.MarshalRDB()
 	default:
 		return []byte{}
 	}
@@ -97,5 +99,14 @@ func (v Value) MarshalError() []byte {
 	bytes = append(bytes, Error)
 	bytes = append(bytes, v.Err...)
 	bytes = append(bytes, '\r', '\n')
+	return bytes
+}
+
+func (v Value) MarshalRDB() []byte {
+	var bytes []byte
+	bytes = append(bytes, Bulk_String)
+	bytes = append(bytes, strconv.Itoa(len(v.Bytes))...)
+	bytes = append(bytes, '\r', '\n')
+	bytes = append(bytes, v.Bytes...)
 	return bytes
 }
