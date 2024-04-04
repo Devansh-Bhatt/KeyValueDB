@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/commands"
@@ -75,6 +76,8 @@ func main() {
 		}
 
 		_, err = conn.Write([]byte("*1\r\n$4\r\nping\r\n"))
+		_, err = conn.Write([]byte(fmt.Sprintf("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n%s\r\n", strconv.Itoa(port))))
+		_, err = conn.Write([]byte("*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n"))
 
 	} else {
 		RedisServer = redis.NewRedisServer(isSlave)

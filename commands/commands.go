@@ -11,11 +11,12 @@ import (
 )
 
 var Handlers = map[string]func(*redis.Redis, []Value) Value{
-	"echo": Echo,
-	"set":  Set,
-	"get":  Get,
-	"ping": Ping,
-	"info": Info,
+	"echo":     Echo,
+	"set":      Set,
+	"get":      Get,
+	"ping":     Ping,
+	"info":     Info,
+	"replconf": ReplConf,
 }
 
 // const (
@@ -101,4 +102,11 @@ func Info(redis *redis.Redis, args []Value) resp.Value {
 		}
 	}
 
+}
+
+func ReplConf(redis *redis.Redis, args []Value) Value {
+	return Value{
+		Typ: StringType,
+		Str: "OK",
+	}
 }
