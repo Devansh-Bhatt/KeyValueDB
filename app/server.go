@@ -13,6 +13,15 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/resp"
 )
 
+var (
+	port        int
+	replicaof   string
+	RedisServer *redis.Redis
+	isSlave     = false
+	masterHost  string
+	masterport  string
+)
+
 func handleconn(conn net.Conn, redis *redis.Redis) {
 	defer conn.Close()
 
@@ -51,40 +60,37 @@ func handleconn(conn net.Conn, redis *redis.Redis) {
 
 func main() {
 	fmt.Println("Logs from your program will appear here!")
-	var port int
-	var replicaof string
-	var Redis *redis.Redis
-	var RedisSlave *redis.RedisSlave
 	flag.IntVar(&port, "port", 6379, "Start Server on : ")
 	flag.StringVar(&replicaof, "replicaof", "", "Host Ip and Port")
 	flag.Parse()
 	if len(strings.TrimSpace(replicaof)) != 0 {
-		Master := replicaof
-		MasterPort := flag.Args()[0]
-		RedisSlave = redis.NewRedisSlave()
-		conn, err := RedisSlave.ConnectMaster(Master, MasterPort)
+		isSlave = true
+		masterHost = replicaof
+		masterport = flag.Args()[0]
+		RedisServer = redis.NewRedisServer(isSlave)
+		conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", masterHost, masterport))
+
 		if err != nil {
-			fmt.Printf(err.Error())
+			fmt.Println("Could not connect to Master")
 		}
+
 		_, err = conn.Write([]byte("*1\r\n$4\r\nping\r\n"))
 
 	} else {
-		Redis = redis.NewRedisMaster()
+		RedisServer = redis.NewRedisServer(isSlave)
 	}
-	fmt.Println(replicaof)
 	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
 	if err != nil {
 		fmt.Printf("Failed to bind to port %d", port)
 		os.Exit(1)
 	}
-	// go test.Test()
 	for {
 		conn, err := l.Accept()
 		if err != nil {
 			fmt.Println("Error accepting connection: ", err.Error())
 			os.Exit(1)
 		}
-		go handleconn(conn, Redis)
+		go handleconn(conn, RedisServer)
 	}
 
 }

@@ -2,7 +2,6 @@ package redis
 
 import (
 	"fmt"
-	"net"
 
 	"github.com/codecrafters-io/redis-starter-go/resp"
 	"github.com/codecrafters-io/redis-starter-go/store"
@@ -12,10 +11,7 @@ import (
 type Redis struct {
 	Store     store.Db
 	repl_info ReplicationInfo
-}
-
-type RedisSlave struct {
-	Redis
+	IsSlave   bool
 }
 
 type ReplicationInfo struct {
@@ -49,51 +45,26 @@ type ReplicationInfo struct {
 
 }
 
-func NewRedisMaster() *Redis {
+func NewRedisServer(isSlave bool) *Redis {
+	var role string
+	if isSlave {
+		role = "slave"
+	} else {
+		role = "master"
+	}
+
 	return &Redis{
 		Store: *store.NewDb(),
 		repl_info: ReplicationInfo{
-			role:               "master",
+			role:               role,
 			master_replid:      util.Randomalphanumericgenerator(40),
 			master_repl_offset: 0,
 		},
 	}
 }
 
-func NewRedisSlave() *RedisSlave {
-	return &RedisSlave{
-		Redis{Store: *store.NewDb(),
-			repl_info: ReplicationInfo{
-				role:               "slave",
-				master_replid:      util.Randomalphanumericgenerator(40),
-				master_repl_offset: 0,
-			}},
-	}
-}
-
-func (rs *RedisSlave) ConnectMaster(Master string, port string) (net.Conn, error) {
-	MasterAddr := fmt.Sprintf("%s:%s", Master, port)
-
-	conn, err := net.Dial("tcp", MasterAddr)
-
-	if err != nil {
-		fmt.Println("couldnt not connect to master")
-	}
-
-	return conn, nil
-}
-
 func (redis *Redis) GetInfo() resp.Value {
 	s := fmt.Sprintf("role:%s\n master_replid:%s\n master_repl_offset:%d", redis.repl_info.role, redis.repl_info.master_replid, redis.repl_info.master_repl_offset)
-
-	return resp.Value{
-		Typ:  resp.BulkStringType,
-		Bulk: s,
-	}
-}
-
-func (rs *RedisSlave) GetInfo() resp.Value {
-	s := fmt.Sprintf("role:%s\n master_replid:%s\n master_repl_offset:%d", rs.repl_info.role, rs.repl_info.master_replid, rs.repl_info.master_repl_offset)
 
 	return resp.Value{
 		Typ:  resp.BulkStringType,
