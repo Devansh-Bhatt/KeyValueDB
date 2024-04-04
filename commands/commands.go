@@ -17,6 +17,7 @@ var Handlers = map[string]func(*redis.Redis, []Value) Value{
 	"ping":     Ping,
 	"info":     Info,
 	"replconf": ReplConf,
+	"psync":    Psync,
 }
 
 // const (
@@ -108,5 +109,12 @@ func ReplConf(redis *redis.Redis, args []Value) Value {
 	return Value{
 		Typ: StringType,
 		Str: "OK",
+	}
+}
+
+func Psync(redis *redis.Redis, args []Value) Value {
+	return Value{
+		Typ: StringType,
+		Str: fmt.Sprintf("FULLRESYNC %s 0", redis.Repl_info.Master_replid),
 	}
 }
