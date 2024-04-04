@@ -70,15 +70,28 @@ func main() {
 		masterport = flag.Args()[0]
 		RedisServer = redis.NewRedisServer(isSlave)
 		conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", masterHost, masterport))
-
+		defer conn.Close()
 		if err != nil {
 			fmt.Println("Could not connect to Master")
 		}
-
+		buf := make([]byte, 1024)
 		_, err = conn.Write([]byte("*1\r\n$4\r\nping\r\n"))
-		_, err = conn.Write([]byte(fmt.Sprintf("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n%s\r\n", strconv.Itoa(port))))
-		_, err = conn.Write([]byte("*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n"))
+		_, err = conn.Read(buf[:])
+		if err != nil {
+			fmt.Println("Error Reading from conn")
+		}
 
+		_, err = conn.Write([]byte(fmt.Sprintf("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n%s\r\n", strconv.Itoa(port))))
+		_, err = conn.Read(buf[:])
+		if err != nil {
+			fmt.Println("Error Reading from conn")
+		}
+
+		_, err = conn.Write([]byte("*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n"))
+		_, err = conn.Read(buf[:])
+		if err != nil {
+			fmt.Println("Error Reading from conn")
+		}
 	} else {
 		RedisServer = redis.NewRedisServer(isSlave)
 	}
