@@ -3,6 +3,7 @@ package redis
 import (
 	"encoding/hex"
 	"fmt"
+	"net"
 
 	"github.com/codecrafters-io/redis-starter-go/resp"
 	"github.com/codecrafters-io/redis-starter-go/store"
@@ -10,9 +11,10 @@ import (
 )
 
 type Redis struct {
-	Store     store.Db
-	Repl_info ReplicationInfo
-	IsSlave   bool
+	Store      store.Db
+	Repl_info  ReplicationInfo
+	IsSlave    bool
+	SlavesConn []net.Conn
 }
 
 type ReplicationInfo struct {
@@ -83,5 +85,15 @@ func (redis *Redis) FullResync() resp.Value {
 	return resp.Value{
 		Typ:   resp.RDBType,
 		Bytes: Bin,
+	}
+}
+
+func (redis *Redis) PropogateCommands(Comms chan []byte) {
+	for{
+		commands := <- Comms
+
+		for _,slave := range redis.SlavesConn {
+			
+		}
 	}
 }

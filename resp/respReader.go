@@ -60,7 +60,6 @@ func (r *Resp) readUntilCLRF() (line []byte, n int, err error) {
 
 func (r *Resp) ParseAny() (Value, error) {
 	Typ, err := r.Reader.ReadByte()
-	// fmt.Println(Typ)
 	if err != nil {
 		return Value{}, err
 	}

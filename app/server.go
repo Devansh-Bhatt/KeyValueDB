@@ -31,6 +31,7 @@ func handleconn(conn net.Conn, redis *redis.Redis) {
 	respWriter := resp.NewRespWriter(conn)
 	for {
 		value, err := respHandler.ParseAny()
+
 		if err == io.EOF {
 			continue
 		}
@@ -77,6 +78,22 @@ func main() {
 		if err != nil {
 			fmt.Println("Could not connect to Master")
 		}
+		respReader := resp.NewRespHandler(conn)
+		go func() {
+			for {
+				value, err := respReader.ParseAny()
+				if err == io.EOF {
+					continue
+				}
+				switch value.Typ {
+				case resp.ArrayType:
+					Reqargs := value.Array
+					Comm := Reqargs[0].Bulk
+					Comm_Args := Reqargs[1:]
+					commands.Handlers[strings.ToLower(Comm)](RedisServer, Comm_Args)
+				}
+			}
+		}()
 		buf := make([]byte, 1024)
 		_, err = conn.Write([]byte("*1\r\n$4\r\nping\r\n"))
 		_, err = conn.Read(buf[:])
