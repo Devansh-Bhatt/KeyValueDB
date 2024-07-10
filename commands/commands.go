@@ -5,12 +5,18 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/codecrafters-io/redis-starter-go/redis"
+	"github.com/codecrafters-io/redis-starter-go/repl"
 	"github.com/codecrafters-io/redis-starter-go/resp"
 	. "github.com/codecrafters-io/redis-starter-go/resp"
+	"github.com/codecrafters-io/redis-starter-go/store"
 )
 
-var Handlers = map[string]func(*redis.Redis, []Value) Value{
+type MetaData struct {
+	Db *store.Db
+	Ri repl.ReplicationInfo
+}
+
+var Handlers = map[string]func(*MetaData, []Value) Value{
 	"echo":     Echo,
 	"set":      Set,
 	"get":      Get,
@@ -20,28 +26,29 @@ var Handlers = map[string]func(*redis.Redis, []Value) Value{
 	"psync":    Psync,
 }
 
-func Ping(redis *redis.Redis, args []Value) Value {
+func Ping(Md *MetaData, args []Value) Value {
 	return Value{
 		Typ: StringType,
 		Str: "PONG",
 	}
 }
 
-func Echo(redis *redis.Redis, args []Value) Value {
+func Echo(Md *MetaData, args []Value) Value {
 	return Value{
 		Typ:  BulkStringType,
 		Bulk: args[0].Bulk,
 	}
 }
 
-func Set(redis *redis.Redis, args []Value) Value {
+func Set(Md *MetaData, args []Value) Value {
+	fmt.Println("reached set")
 	key := args[0].Bulk
 	val := args[1].Bulk
 
 	switch len(args) {
 	case 2:
-		redis.Store.Set(key, []byte(val), -1)
-
+		Md.Db.Set(key, []byte(val), -1)
+		fmt.Println("Key has been set")
 		return Value{
 			Typ: StringType,
 			Str: "OK",
@@ -57,7 +64,8 @@ func Set(redis *redis.Redis, args []Value) Value {
 				Err: "Wrong arguments",
 			}
 		}
-		redis.Store.Set(key, []byte(val), conv)
+		Md.Db.Set(key, []byte(val), conv)
+		fmt.Println("Key with TTL has been set")
 		return Value{
 			Typ: StringType,
 			Str: "OK",
@@ -70,10 +78,10 @@ func Set(redis *redis.Redis, args []Value) Value {
 	}
 }
 
-func Get(redis *redis.Redis, args []Value) resp.Value {
+func Get(Md *MetaData, args []Value) resp.Value {
 	fmt.Println("reached Get")
-	val, err := redis.Store.Get(args[0].Bulk)
-
+	val, err := Md.Db.Get(args[0].Bulk)
+	fmt.Println(string(val))
 	if err != nil {
 		return Value{
 			Typ: NULLType,
@@ -85,11 +93,11 @@ func Get(redis *redis.Redis, args []Value) resp.Value {
 	}
 }
 
-func Info(redis *redis.Redis, args []Value) resp.Value {
+func Info(Md *MetaData, args []Value) resp.Value {
 	SubComm := strings.ToLower(args[0].Bulk)
 	switch SubComm {
 	case "replication":
-		return redis.GetInfo()
+		return Md.Ri.GetInfo()
 	default:
 		return Value{
 			Typ: NULLType,
@@ -98,20 +106,20 @@ func Info(redis *redis.Redis, args []Value) resp.Value {
 
 }
 
-func ReplConf(redis *redis.Redis, args []Value) Value {
+func ReplConf(Md *MetaData, args []Value) Value {
 	return Value{
 		Typ: StringType,
 		Str: "OK",
 	}
 }
 
-func Psync(redis *redis.Redis, args []Value) Value {
+func Psync(Md *MetaData, args []Value) Value {
 	return Value{
 		Typ: StringType,
-		Str: fmt.Sprintf("FULLRESYNC %s 0", redis.Repl_info.Master_replid),
+		Str: fmt.Sprintf("FULLRESYNC %s 0", Md.Ri.Master_replid),
 	}
 }
 
-func SendEmptyRDb(redis *redis.Redis) Value {
-	return redis.FullResync()
+func SendEmptyRDb(Md *MetaData) Value {
+	return Md.Ri.FullResync()
 }

@@ -7,6 +7,10 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/resp"
 )
 
+const (
+	hexcontent = "524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2"
+)
+
 type ReplicationInfo struct {
 	Role string
 	// "master" - if the instance is replica of noone
@@ -48,7 +52,7 @@ func (Ri *ReplicationInfo) GetInfo() resp.Value {
 }
 
 func (Ri *ReplicationInfo) FullResync() resp.Value {
-	HexContent := "524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2"
+	HexContent := hexcontent
 	Bin, err := hex.DecodeString(HexContent)
 
 	if err != nil {

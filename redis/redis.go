@@ -1,89 +1,173 @@
 package redis
 
 import (
-	"encoding/hex"
 	"fmt"
+	"io"
 	"net"
+	"os"
+	"strings"
 
+	"github.com/codecrafters-io/redis-starter-go/commands"
+	"github.com/codecrafters-io/redis-starter-go/repl"
 	"github.com/codecrafters-io/redis-starter-go/resp"
 	"github.com/codecrafters-io/redis-starter-go/store"
 	"github.com/codecrafters-io/redis-starter-go/util"
 )
 
+const (
+	REPLCONF_1 = "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n%s\r\n"
+	REPLCONF_2 = "*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n"
+	PSYNC      = "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"
+	PING       = "*1\r\n$4\r\nping\r\n"
+)
+
 type Redis struct {
-	Store      store.Db
-	Repl_info  ReplicationInfo
+	Store     *store.Db
+	Repl_info repl.ReplicationInfo
+}
+
+type Redis_Master_Server struct {
+	*Redis
 	IsSlave    bool
 	SlavesConn []net.Conn
 }
 
-type ReplicationInfo struct {
-	role string
-	// "master" - if the instance is replica of noone
-	// "slave"  - if the intsance is a replica of some master instances
-
-	connected_slaves int32
-	// No of connected Replicas
-
-	Master_replid string
-	// The replication ID of the Redis server.
-
-	master_repl_offset int32
-	// The server's current replication offset
-
-	second_repl_offset int32
-	// The offset up to which replication IDs are accepted
-
-	repl_backlog_active bool
-	// Flag indicating replication backlog is active
-
-	repl_backlog_size int64
-	// Total size in bytes of the replication backlog buffer
-
-	repl_backlog_first_byte_offset int32
-	// The master offset of the replication backlog buffer
-
-	repl_backlog_hlisten int32
-	// Size in bytes of the data in the replication backlog buffer
-
+type Redis_Slave_Server struct {
+	*Redis
+	IsSlave bool
 }
 
-func NewRedisServer(isSlave bool) *Redis {
-	var role string
-	if isSlave {
-		role = "slave"
-	} else {
-		role = "master"
-	}
-
-	return &Redis{
-		Store: *store.NewDb(),
-		Repl_info: ReplicationInfo{
-			role:               role,
-			Master_replid:      util.Randomalphanumericgenerator(40),
-			master_repl_offset: 0,
+func New_Redis_Master_Server() *Redis_Master_Server {
+	return &Redis_Master_Server{
+		Redis: &Redis{
+			Store: store.NewDb(),
+			Repl_info: repl.ReplicationInfo{
+				Role:               "master",
+				Master_replid:      util.Randomalphanumericgenerator(40),
+				Master_repl_offset: 0,
+			},
 		},
+		IsSlave:    false,
+		SlavesConn: []net.Conn{},
 	}
 }
 
-func (redis *Redis) GetInfo() resp.Value {
-	s := fmt.Sprintf("role:%s\n master_replid:%s\n master_repl_offset:%d", redis.Repl_info.role, redis.Repl_info.Master_replid, redis.Repl_info.master_repl_offset)
-
-	return resp.Value{
-		Typ:  resp.BulkStringType,
-		Bulk: s,
+func New_Redis_Slave_Server() *Redis_Slave_Server {
+	return &Redis_Slave_Server{
+		Redis: &Redis{
+			Store: store.NewDb(),
+			Repl_info: repl.ReplicationInfo{
+				Role:               "slave",
+				Master_replid:      util.Randomalphanumericgenerator(40),
+				Master_repl_offset: 0,
+			},
+		},
+		IsSlave: true,
 	}
 }
 
-func (redis *Redis) FullResync() resp.Value {
-	HexContent := "524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2"
-	Bin, err := hex.DecodeString(HexContent)
-
+func (sRedis *Redis_Slave_Server) Handshake_Slave_Master(conn net.Conn, masterHost string, masterPort string) {
+	respReader := resp.NewRespHandler(conn)
+	go func() {
+		for {
+			value, err := respReader.ParseAny()
+			if err == io.EOF {
+				continue
+			}
+			switch value.Typ {
+			case resp.ArrayType:
+				Reqargs := value.Array
+				Comm := Reqargs[0].Bulk
+				Comm_Args := Reqargs[1:]
+				Metadata := &commands.MetaData{
+					Db: sRedis.Store,
+					Ri: sRedis.Repl_info,
+				}
+				commands.Handlers[strings.ToLower(Comm)](Metadata, Comm_Args)
+			}
+		}
+	}()
+	buf := make([]byte, 1024)
+	_, err := conn.Write([]byte(PING))
+	_, err = conn.Read(buf[:])
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Error Reading from connection")
 	}
-	return resp.Value{
-		Typ:   resp.RDBType,
-		Bytes: Bin,
+
+	_, err = conn.Write([]byte(fmt.Sprintf(REPLCONF_1, masterPort)))
+	_, err = conn.Read(buf[:])
+	if err != nil {
+		fmt.Println("Error Reading from connection")
+	}
+
+	_, err = conn.Write([]byte(REPLCONF_2))
+	_, err = conn.Read(buf[:])
+	if err != nil {
+		fmt.Println("Error Reading from connection")
+	}
+
+	_, err = conn.Write([]byte(PSYNC))
+	_, err = conn.Read(buf[:])
+	if err != nil {
+		fmt.Println("Error Reading from connection")
+	}
+
+}
+
+func (redis *Redis) HandleConn(conn net.Conn) {
+	defer conn.Close()
+
+	fmt.Println("Connected from handleConn")
+	respHandler := resp.NewRespHandler(conn)
+	respWriter := resp.NewRespWriter(conn)
+	for {
+		value, err := respHandler.ParseAny()
+		if err == io.EOF {
+			continue
+		}
+		fmt.Println(value)
+		switch value.Typ {
+		case resp.ArrayType:
+
+			Reqargs := value.Array
+			Comm := Reqargs[0].Bulk
+			Comm_Args := Reqargs[1:]
+			Metadata := &commands.MetaData{
+				Db: redis.Store,
+				Ri: redis.Repl_info,
+			}
+			respValue := commands.Handlers[strings.ToLower(Comm)](Metadata, Comm_Args)
+			respWriter.Write(respValue)
+			if strings.ToLower(Comm) == "psync" {
+				respWriter.Write(commands.SendEmptyRDb(Metadata))
+			}
+		case resp.StringType:
+			switch strings.ToLower(value.Str) {
+			case "ping":
+				respValue := resp.Value{
+					Typ: resp.StringType,
+					Str: "PONG",
+				}
+
+				respWriter.Write(respValue)
+			}
+
+		}
+	}
+}
+
+func (redis *Redis) Start_Server(port int) {
+	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
+	if err != nil {
+		fmt.Printf("Failed to bind to port %d", port)
+		os.Exit(1)
+	}
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			fmt.Println("Error accepting connection: ", err.Error())
+			os.Exit(1)
+		}
+		go redis.HandleConn(conn)
 	}
 }
