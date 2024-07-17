@@ -22,6 +22,7 @@ const (
 )
 
 type Redis struct {
+	Comms     chan resp.Value
 	Store     *store.Db
 	Repl_info repl.ReplicationInfo
 }
@@ -114,45 +115,52 @@ func (sRedis *Redis_Slave_Server) Handshake_Slave_Master(conn net.Conn, masterHo
 
 }
 
+func (redis *Redis) Handle_Comms(respWriter *resp.Writer) {
+	Value := <-redis.Comms
+	switch Value.Typ {
+	case resp.ArrayType:
+
+		Reqargs := Value.Array
+		Comm := Reqargs[0].Bulk
+		Comm_Args := Reqargs[1:]
+		Metadata := &commands.MetaData{
+			Db: redis.Store,
+			Ri: redis.Repl_info,
+		}
+		respValue := commands.Handlers[strings.ToLower(Comm)](Metadata, Comm_Args)
+		respWriter.Write(respValue)
+		if strings.ToLower(Comm) == "psync" {
+			// I know that it is a slave server and not a normal client and the Handshake is successful
+			respWriter.Write(commands.SendEmptyRDb(Metadata))
+		}
+	case resp.StringType:
+		switch strings.ToLower(Value.Str) {
+		case "ping":
+			respValue := resp.Value{
+				Typ: resp.StringType,
+				Str: "PONG",
+			}
+
+			respWriter.Write(respValue)
+		}
+	}
+
+}
+
 func (redis *Redis) HandleConn(conn net.Conn) {
 	defer conn.Close()
 
 	fmt.Println("Connected from handleConn")
 	respHandler := resp.NewRespHandler(conn)
 	respWriter := resp.NewRespWriter(conn)
+	go redis.Handle_Comms(respWriter)
 	for {
 		value, err := respHandler.ParseAny()
 		if err == io.EOF {
 			continue
 		}
+		redis.Comms <- value
 		fmt.Println(value)
-		switch value.Typ {
-		case resp.ArrayType:
-
-			Reqargs := value.Array
-			Comm := Reqargs[0].Bulk
-			Comm_Args := Reqargs[1:]
-			Metadata := &commands.MetaData{
-				Db: redis.Store,
-				Ri: redis.Repl_info,
-			}
-			respValue := commands.Handlers[strings.ToLower(Comm)](Metadata, Comm_Args)
-			respWriter.Write(respValue)
-			if strings.ToLower(Comm) == "psync" {
-				respWriter.Write(commands.SendEmptyRDb(Metadata))
-			}
-		case resp.StringType:
-			switch strings.ToLower(value.Str) {
-			case "ping":
-				respValue := resp.Value{
-					Typ: resp.StringType,
-					Str: "PONG",
-				}
-
-				respWriter.Write(respValue)
-			}
-
-		}
 	}
 }
 
@@ -170,4 +178,8 @@ func (redis *Redis) Start_Server(port int) {
 		}
 		go redis.HandleConn(conn)
 	}
+}
+
+func (mredis *Redis_Master_Server) Handle_Slave_Conn(conn net.Conn) {
+
 }

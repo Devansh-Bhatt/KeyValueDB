@@ -43,7 +43,7 @@ type ReplicationInfo struct {
 }
 
 func (Ri *ReplicationInfo) GetInfo() resp.Value {
-	s := fmt.Sprintf("role:%s\n master_replid:%s\n master_repl_offset:%d", Ri.Role, Ri.Master_replid, Ri.Master_repl_offset)
+	s := fmt.Sprintf("role:%s\n master_replid:%s\n master_repl_offset:%d\n Connected_Slaves:%d", Ri.Role, Ri.Master_replid, Ri.Master_repl_offset, Ri.Connected_slaves)
 
 	return resp.Value{
 		Typ:  resp.BulkStringType,
