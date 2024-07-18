@@ -47,6 +47,7 @@ func New_Redis_Master_Server() *Redis_Master_Server {
 				Master_replid:      util.Randomalphanumericgenerator(40),
 				Master_repl_offset: 0,
 			},
+			Comms: make(chan resp.Value),
 		},
 		IsSlave:    false,
 		SlavesConn: []net.Conn{},
@@ -62,6 +63,7 @@ func New_Redis_Slave_Server() *Redis_Slave_Server {
 				Master_replid:      util.Randomalphanumericgenerator(40),
 				Master_repl_offset: 0,
 			},
+			Comms: make(chan resp.Value),
 		},
 		IsSlave: true,
 	}
@@ -116,32 +118,36 @@ func (sRedis *Redis_Slave_Server) Handshake_Slave_Master(conn net.Conn, masterHo
 }
 
 func (redis *Redis) Handle_Comms(respWriter *resp.Writer) {
-	Value := <-redis.Comms
-	switch Value.Typ {
-	case resp.ArrayType:
+	fmt.Println("In Handle_Comms")
+	for {
+		Value := <-redis.Comms
+		fmt.Println(Value)
+		switch Value.Typ {
+		case resp.ArrayType:
 
-		Reqargs := Value.Array
-		Comm := Reqargs[0].Bulk
-		Comm_Args := Reqargs[1:]
-		Metadata := &commands.MetaData{
-			Db: redis.Store,
-			Ri: redis.Repl_info,
-		}
-		respValue := commands.Handlers[strings.ToLower(Comm)](Metadata, Comm_Args)
-		respWriter.Write(respValue)
-		if strings.ToLower(Comm) == "psync" {
-			// I know that it is a slave server and not a normal client and the Handshake is successful
-			respWriter.Write(commands.SendEmptyRDb(Metadata))
-		}
-	case resp.StringType:
-		switch strings.ToLower(Value.Str) {
-		case "ping":
-			respValue := resp.Value{
-				Typ: resp.StringType,
-				Str: "PONG",
+			Reqargs := Value.Array
+			Comm := Reqargs[0].Bulk
+			Comm_Args := Reqargs[1:]
+			Metadata := &commands.MetaData{
+				Db: redis.Store,
+				Ri: redis.Repl_info,
 			}
-
+			respValue := commands.Handlers[strings.ToLower(Comm)](Metadata, Comm_Args)
 			respWriter.Write(respValue)
+			if strings.ToLower(Comm) == "psync" {
+				// I know that it is a slave server and not a normal client and the Handshake is successful
+				respWriter.Write(commands.SendEmptyRDb(Metadata))
+			}
+		case resp.StringType:
+			switch strings.ToLower(Value.Str) {
+			case "ping":
+				respValue := resp.Value{
+					Typ: resp.StringType,
+					Str: "PONG",
+				}
+
+				respWriter.Write(respValue)
+			}
 		}
 	}
 
@@ -159,8 +165,8 @@ func (redis *Redis) HandleConn(conn net.Conn) {
 		if err == io.EOF {
 			continue
 		}
-		redis.Comms <- value
 		fmt.Println(value)
+		redis.Comms <- value
 	}
 }
 
