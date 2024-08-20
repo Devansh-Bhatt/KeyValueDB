@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 
@@ -12,8 +13,11 @@ import (
 )
 
 type MetaData struct {
-	Db *store.Db
-	Ri repl.ReplicationInfo
+	Db     *store.Db
+	Ri     repl.ReplicationInfo
+	Comm   chan resp.Value
+	Slaves []net.Conn
+	Client net.Conn
 }
 
 var Handlers = map[string]func(*MetaData, []Value) Value{
@@ -24,9 +28,12 @@ var Handlers = map[string]func(*MetaData, []Value) Value{
 	"info":     Info,
 	"replconf": ReplConf,
 	"psync":    Psync,
+	"emptyrdb": SendEmptyRDb,
+	"addslave": Add_Slave,
 }
 
 func Ping(Md *MetaData, args []Value) Value {
+	fmt.Println("IN Ping")
 	return Value{
 		Typ: StringType,
 		Str: "PONG",
@@ -71,6 +78,7 @@ func Set(Md *MetaData, args []Value) Value {
 			Str: "OK",
 		}
 	default:
+		fmt.Println("Here ....... ")
 		return Value{
 			Typ: NULLType,
 			// Err: "Could not set the Value",
@@ -107,6 +115,21 @@ func Info(Md *MetaData, args []Value) resp.Value {
 }
 
 func ReplConf(Md *MetaData, args []Value) Value {
+	fmt.Println("In Repl_Conf")
+	Add_Slave := Value{
+		Typ: "AddSlave",
+	}
+	Md.Comm <- Add_Slave
+	return Value{
+		Typ: StringType,
+		Str: "OK",
+	}
+}
+
+func Add_Slave(Md *MetaData, args []Value) Value {
+	fmt.Println("Adding Slave")
+	Md.Slaves = append(Md.Slaves, Md.Client)
+	Md.Ri.Connected_slaves++
 	return Value{
 		Typ: StringType,
 		Str: "OK",
@@ -114,12 +137,18 @@ func ReplConf(Md *MetaData, args []Value) Value {
 }
 
 func Psync(Md *MetaData, args []Value) Value {
+	fmt.Println("In Psync")
+	FullResyncComm := Value{
+		Typ: "EmptyRDB",
+	}
+	Md.Comm <- FullResyncComm
+
 	return Value{
 		Typ: StringType,
 		Str: fmt.Sprintf("FULLRESYNC %s 0", Md.Ri.Master_replid),
 	}
 }
 
-func SendEmptyRDb(Md *MetaData) Value {
+func SendEmptyRDb(Md *MetaData, args []Value) Value {
 	return Md.Ri.FullResync()
 }

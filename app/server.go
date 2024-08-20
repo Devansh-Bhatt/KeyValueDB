@@ -25,17 +25,20 @@ func main() {
 		repl_parts := strings.Split(replicaof, " ")
 		masterHost = repl_parts[0]
 		masterport = repl_parts[1]
-		RedisServer := redis.New_Redis_Slave_Server()
+		// RedisServer := redis.New_Redis_Slave_Server()
 		conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", masterHost, masterport))
 		defer conn.Close()
 		if err != nil {
 			fmt.Println("Could not connect to Master")
 		}
-		RedisServer.Start_Server(port)
-		RedisServer.Handshake_Slave_Master(conn, masterHost, masterport)
+		_, RedisServer := redis.Init_Server(true)
+		RedisServer.Start_Server(port, conn, masterHost, masterport)
 	} else {
-		RedisServer := redis.New_Redis_Master_Server()
+
+		// RedisServer := redis.New_Redis_Master_Server()
+		RedisServer, _ := redis.Init_Server(false)
 		RedisServer.Start_Server(port)
+
 	}
 
 }
