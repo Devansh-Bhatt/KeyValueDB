@@ -2,7 +2,6 @@ package resp
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"strconv"
 )
@@ -30,10 +29,6 @@ type Value struct {
 	Bulk  string
 	Bytes []byte
 	Array []Value
-}
-
-func (v *Value) String() string {
-	return fmt.Sprintf("arr: %v", v.Array)
 }
 
 type Resp struct {

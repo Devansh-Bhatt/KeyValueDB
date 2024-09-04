@@ -12,12 +12,19 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/store"
 )
 
+type Client_Comm struct {
+	Comm   resp.Value
+	RW     *resp.Writer
+	Client net.Conn
+}
+
 type MetaData struct {
 	Db     *store.Db
 	Ri     repl.ReplicationInfo
-	Comm   chan resp.Value
+	Comm   chan Client_Comm
 	Slaves []net.Conn
 	Client net.Conn
+	RW     *resp.Writer
 }
 
 var Handlers = map[string]func(*MetaData, []Value) Value{
@@ -33,7 +40,7 @@ var Handlers = map[string]func(*MetaData, []Value) Value{
 }
 
 func Ping(Md *MetaData, args []Value) Value {
-	fmt.Println("IN Ping")
+	fmt.Println("In Ping")
 	return Value{
 		Typ: StringType,
 		Str: "PONG",
@@ -48,7 +55,7 @@ func Echo(Md *MetaData, args []Value) Value {
 }
 
 func Set(Md *MetaData, args []Value) Value {
-	fmt.Println("reached set")
+	fmt.Println("Reached Set")
 	key := args[0].Bulk
 	val := args[1].Bulk
 
@@ -87,7 +94,7 @@ func Set(Md *MetaData, args []Value) Value {
 }
 
 func Get(Md *MetaData, args []Value) resp.Value {
-	fmt.Println("reached Get")
+	fmt.Println("Reached Get")
 	val, err := Md.Db.Get(args[0].Bulk)
 	fmt.Println(string(val))
 	if err != nil {
@@ -102,6 +109,7 @@ func Get(Md *MetaData, args []Value) resp.Value {
 }
 
 func Info(Md *MetaData, args []Value) resp.Value {
+	fmt.Println("In Get Info")
 	SubComm := strings.ToLower(args[0].Bulk)
 	switch SubComm {
 	case "replication":
@@ -116,20 +124,51 @@ func Info(Md *MetaData, args []Value) resp.Value {
 
 func ReplConf(Md *MetaData, args []Value) Value {
 	fmt.Println("In Repl_Conf")
-	Add_Slave := Value{
-		Typ: "AddSlave",
+	fmt.Println(args[0].Bulk)
+	switch args[0].Bulk {
+	case "listening-port":
+		Add_Slave := Value{
+			Typ: ArrayType,
+			Array: []Value{
+				{
+					Bulk: "AddSlave",
+				},
+			},
+		}
+		fmt.Println("Putting in the channel the command to add the slave")
+		go func() {
+			Md.Comm <- Client_Comm{
+				Comm:   Add_Slave,
+				RW:     Md.RW,
+				Client: Md.Client,
+			}
+		}()
+		fmt.Println("added slave")
+		return Value{
+			Typ: StringType,
+			Str: "OK",
+		}
+	case "capa":
+		return Value{
+			Typ: StringType,
+			Str: "OK",
+		}
+	default:
+		return Value{
+			Typ: ErrorType,
+			Str: "Wrong Command",
+		}
+
 	}
-	Md.Comm <- Add_Slave
-	return Value{
-		Typ: StringType,
-		Str: "OK",
-	}
+
 }
 
 func Add_Slave(Md *MetaData, args []Value) Value {
-	fmt.Println("Adding Slave")
+	// fmt.Println("Adding Slave")
 	Md.Slaves = append(Md.Slaves, Md.Client)
+	// fmt.Println("Appended in Slaves list")
 	Md.Ri.Connected_slaves++
+	fmt.Println(Md.Ri.Connected_slaves)
 	return Value{
 		Typ: StringType,
 		Str: "OK",
@@ -139,10 +178,20 @@ func Add_Slave(Md *MetaData, args []Value) Value {
 func Psync(Md *MetaData, args []Value) Value {
 	fmt.Println("In Psync")
 	FullResyncComm := Value{
-		Typ: "EmptyRDB",
+		Typ: ArrayType,
+		Array: []Value{
+			{
+				Bulk: "EmptyRDB",
+			},
+		},
 	}
-	Md.Comm <- FullResyncComm
-
+	go func() {
+		Md.Comm <- Client_Comm{
+			Comm:   FullResyncComm,
+			Client: Md.Client,
+			RW:     Md.RW,
+		}
+	}()
 	return Value{
 		Typ: StringType,
 		Str: fmt.Sprintf("FULLRESYNC %s 0", Md.Ri.Master_replid),
@@ -150,5 +199,6 @@ func Psync(Md *MetaData, args []Value) Value {
 }
 
 func SendEmptyRDb(Md *MetaData, args []Value) Value {
+	fmt.Println("In Send Empty RDB")
 	return Md.Ri.FullResync()
 }

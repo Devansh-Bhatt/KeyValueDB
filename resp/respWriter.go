@@ -1,6 +1,7 @@
 package resp
 
 import (
+	"fmt"
 	"io"
 	"strconv"
 )
@@ -19,7 +20,8 @@ func (w *Writer) Write(v Value) error {
 	_, err := w.writer.Write(bytes)
 
 	if err != nil {
-		return err
+		fmt.Printf("Err from Here : %s", err)
+		// return err
 	}
 
 	return nil
