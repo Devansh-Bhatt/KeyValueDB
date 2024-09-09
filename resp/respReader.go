@@ -2,6 +2,7 @@ package resp
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"strconv"
 )
@@ -12,6 +13,7 @@ const (
 	Bulk_String    = '$'
 	Array          = '*'
 	Error          = '-'
+	RDB            = '&'
 	IntegerType    = "Integer"
 	StringType     = "String"
 	BulkStringType = "Bulk"
@@ -79,6 +81,8 @@ func (r *Resp) ParseAny() (Value, error) {
 		return r.parseString()
 	case Error:
 		return r.parseError()
+	case RDB:
+		return r.parseRDB()
 	default:
 		// p, err := r.Reader.Peek(1)
 		// fmt.Print("Problem: ", p[0])
@@ -186,5 +190,21 @@ func (r *Resp) parseError() (Value, error) {
 	}
 
 	v.Err = string(line)
+	return v, nil
+}
+
+func (r *Resp) parseRDB() (Value, error) {
+	fmt.Println("Parsing RDB Brother")
+	v := Value{
+		Typ: RDBType,
+	}
+
+	line, _, err := r.readUntilCLRF()
+	fmt.Println(string(line))
+	if err != nil {
+		return v, err
+	}
+	v.Bytes = line
+	r.readUntilCLRF()
 	return v, nil
 }

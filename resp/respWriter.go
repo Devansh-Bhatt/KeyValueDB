@@ -105,10 +105,12 @@ func (v Value) MarshalError() []byte {
 }
 
 func (v Value) MarshalRDB() []byte {
+	fmt.Println("Marshalling RDB brother")
 	var bytes []byte
-	bytes = append(bytes, Bulk_String)
+	bytes = append(bytes, RDB)
 	bytes = append(bytes, strconv.Itoa(len(v.Bytes))...)
 	bytes = append(bytes, '\r', '\n')
 	bytes = append(bytes, v.Bytes...)
+	bytes = append(bytes, '\r', '\n')
 	return bytes
 }

@@ -29,13 +29,14 @@ type Redis struct {
 	Comms      chan commands.Client_Comm
 	Store      *store.Db
 	Repl_info  repl.ReplicationInfo
-	SlavesConn []net.Conn
-	Clients    []net.Conn
+	SlavesConn *[]resp.Writer
+	Clients    *[]net.Conn
 }
 
 type Redis_Master_Server struct {
 	*Redis
-	IsSlave bool
+	IsSlave     bool
+	Slave_Comms chan commands.Client_Comm
 }
 
 type Redis_Slave_Server struct {
@@ -44,6 +45,7 @@ type Redis_Slave_Server struct {
 
 func New_Redis_Master_Server() *Redis_Master_Server {
 	comms := make(chan commands.Client_Comm)
+	slavecomms := make(chan commands.Client_Comm)
 	return &Redis_Master_Server{
 		Redis: &Redis{
 			Store: store.NewDb(),
@@ -54,9 +56,11 @@ func New_Redis_Master_Server() *Redis_Master_Server {
 				Connected_slaves:   0,
 			},
 			Comms:      comms,
-			SlavesConn: []net.Conn{},
+			SlavesConn: &[]resp.Writer{},
+			Clients:    &[]net.Conn{},
 		},
-		IsSlave: false,
+		IsSlave:     false,
+		Slave_Comms: slavecomms,
 	}
 }
 
@@ -80,12 +84,20 @@ func New_Redis_Slave_Server() *Redis_Slave_Server {
 func (sRedis *Redis_Slave_Server) Handshake_Slave_Master(conn net.Conn, masterHost string, masterPort string) {
 	fmt.Println("In Handshake_Slave_Master")
 	respReader := resp.NewRespHandler(conn)
-	go sRedis.Sync_Master(conn, masterPort)
+	// respWriter := resp.NewRespWriter(conn)
+	sRedis.Sync_Master(conn, masterPort)
+	// var buffer
 	for {
 		value, err := respReader.ParseAny()
+		fmt.Println(value)
+		// respWriter.Write(value)
 		if err == io.EOF {
 			continue
 		}
+		// sRedis.Comms <- commands.Client_Comm{
+		// 	Comm: value,
+		// 	RW:   respWriter,
+		// }
 		switch value.Typ {
 		case resp.ArrayType:
 			Reqargs := value.Array
@@ -93,9 +105,12 @@ func (sRedis *Redis_Slave_Server) Handshake_Slave_Master(conn net.Conn, masterHo
 			Comm_Args := Reqargs[1:]
 			Metadata := &commands.MetaData{
 				Db: sRedis.Store,
-				Ri: sRedis.Repl_info,
+				Ri: &sRedis.Repl_info,
 			}
 			commands.Handlers[strings.ToLower(Comm)](Metadata, Comm_Args)
+		case resp.RDBType:
+			fmt.Println("here got an RDB")
+			fmt.Println(value)
 		}
 	}
 
@@ -106,7 +121,7 @@ func (sRedis *Redis_Slave_Server) Sync_Master(conn net.Conn, masterPort string) 
 	// buf := make([]byte, 1024)
 	_, err := conn.Write([]byte(PING))
 	// _, err = conn.Read(buf[:])
-	_, err = fmt.Printf("Sync_Ping Done \n")
+	fmt.Printf("Sync_Ping Done \n")
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
@@ -140,7 +155,7 @@ func (redis *Redis) Handle_Comms() {
 	fmt.Println("In Handle_Comms")
 	Metadata := &commands.MetaData{
 		Db:     redis.Store,
-		Ri:     redis.Repl_info,
+		Ri:     &redis.Repl_info,
 		Comm:   redis.Comms,
 		Slaves: redis.SlavesConn,
 	}
@@ -158,11 +173,18 @@ func (redis *Redis) Handle_Comms() {
 					fmt.Println(Comm)
 					Comm_Args := Reqargs[1:]
 					respValue := commands.Handlers[strings.ToLower(Comm)](Metadata, Comm_Args)
-					fmt.Println(respValue)
+					fmt.Printf("The response : %v \n", respValue)
 					err := Value.RW.Write(respValue)
+					fmt.Println("The response has been sent")
 					if err != nil {
 						fmt.Println(err)
 					}
+				case resp.RDBType:
+					fmt.Println("here in RDB")
+					fmt.Println(Value.Comm.Bytes)
+
+				case resp.BulkStringType:
+					fmt.Println(Value.Comm)
 				}
 			}
 		}
@@ -206,10 +228,15 @@ func (mRedis *Redis_Master_Server) Handle_Conn(conn net.Conn) {
 			continue
 		}
 		mRedis.Comms <- commands.Client_Comm{
-			Comm: value,
-			RW:   respWriter,
+			Comm:   value,
+			RW:     respWriter,
+			Client: &conn,
 		}
-
+		mRedis.Slave_Comms <- commands.Client_Comm{
+			Comm:   value,
+			RW:     respWriter,
+			Client: &conn,
+		}
 	}
 }
 func Init_Server(isSlave bool) (*Redis_Master_Server, *Redis_Slave_Server) {
@@ -235,7 +262,10 @@ func (mRedis *Redis_Master_Server) Start_Server(port int) {
 			fmt.Println("Error accepting connection: ", err.Error())
 			os.Exit(1)
 		}
-		mRedis.Clients = append(mRedis.Clients, conn)
+		*mRedis.Clients = append(*mRedis.Clients, conn)
+		// ClientList := *mRedis.Clients
+		// ClientList = append(ClientList, conn)
+		// mRedis.Clients = &ClientList
 		go mRedis.Handle_Conn(conn)
 	}
 }
@@ -246,6 +276,7 @@ func (sRedis *Redis_Slave_Server) Start_Server(port int, conn net.Conn, masterHo
 		os.Exit(1)
 	}
 	go sRedis.Handshake_Slave_Master(conn, masterHost, masterPort)
+	go sRedis.Handle_Comms()
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -259,13 +290,19 @@ func (sRedis *Redis_Slave_Server) Start_Server(port int, conn net.Conn, masterHo
 func (mRedis *Redis_Master_Server) Handle_Slave_Conn() {
 	for {
 		select {
-		case Value := <-mRedis.Comms:
+		case Value := <-mRedis.Slave_Comms:
 			{
-				for _, slave := range mRedis.SlavesConn {
-					slave.Write(Value.Comm.Bytes)
+
+				if Value.Comm.Array[0].Bulk == "set" {
+					fmt.Println("Sending comm to slave")
+					fmt.Printf("Size of slave list is : %v \n", len(*mRedis.SlavesConn))
+					for _, slave := range *mRedis.SlavesConn {
+						fmt.Printf("The value is : %v to %v \n", Value.Comm, slave)
+						slave.Write(Value.Comm)
+
+					}
 				}
 			}
 		}
-
 	}
 }

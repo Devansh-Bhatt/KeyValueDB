@@ -15,15 +15,15 @@ import (
 type Client_Comm struct {
 	Comm   resp.Value
 	RW     *resp.Writer
-	Client net.Conn
+	Client *net.Conn
 }
 
 type MetaData struct {
 	Db     *store.Db
-	Ri     repl.ReplicationInfo
+	Ri     *repl.ReplicationInfo
 	Comm   chan Client_Comm
-	Slaves []net.Conn
-	Client net.Conn
+	Slaves *[]resp.Writer
+	Client *net.Conn
 	RW     *resp.Writer
 }
 
@@ -164,11 +164,9 @@ func ReplConf(Md *MetaData, args []Value) Value {
 }
 
 func Add_Slave(Md *MetaData, args []Value) Value {
-	// fmt.Println("Adding Slave")
-	Md.Slaves = append(Md.Slaves, Md.Client)
-	// fmt.Println("Appended in Slaves list")
+	*Md.Slaves = append(*Md.Slaves, *Md.RW)
 	Md.Ri.Connected_slaves++
-	fmt.Println(Md.Ri.Connected_slaves)
+	fmt.Println(Md.Slaves)
 	return Value{
 		Typ: StringType,
 		Str: "OK",
