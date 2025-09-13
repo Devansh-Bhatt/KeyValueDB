@@ -165,17 +165,17 @@ func (redis *Redis) Handle_Comms() {
 			{
 				Metadata.Client = Value.Client
 				Metadata.RW = Value.RW
-				fmt.Println(Value)
+				// fmt.Println(Value)
 				switch Value.Comm.Typ {
 				case resp.ArrayType:
 					Reqargs := Value.Comm.Array
 					Comm := Reqargs[0].Bulk
-					fmt.Println(Comm)
+					// fmt.Println(Comm)
 					Comm_Args := Reqargs[1:]
 					respValue := commands.Handlers[strings.ToLower(Comm)](Metadata, Comm_Args)
-					fmt.Printf("The response : %v \n", respValue)
+					// fmt.Printf("The response : %v \n", respValue)
 					err := Value.RW.Write(respValue)
-					fmt.Println("The response has been sent")
+					// fmt.Println("The response has been sent")
 					if err != nil {
 						fmt.Println(err)
 					}
@@ -184,6 +184,7 @@ func (redis *Redis) Handle_Comms() {
 					fmt.Println(Value.Comm.Bytes)
 
 				case resp.BulkStringType:
+					fmt.Println("In Bulk String")
 					fmt.Println(Value.Comm)
 				}
 			}

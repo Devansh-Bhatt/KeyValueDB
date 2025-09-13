@@ -23,7 +23,7 @@ func NewDb() *Db {
 }
 
 func (db *Db) Set(key string, val []byte, expiry int64) {
-	newDbVal := DbValue{
+    newDbVal := DbValue{
 		Value: val,
 	}
 	if expiry != -1 {

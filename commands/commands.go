@@ -40,7 +40,7 @@ var Handlers = map[string]func(*MetaData, []Value) Value{
 }
 
 func Ping(Md *MetaData, args []Value) Value {
-	fmt.Println("In Ping")
+	// fmt.Println("In Ping")
 	return Value{
 		Typ: StringType,
 		Str: "PONG",
@@ -55,14 +55,14 @@ func Echo(Md *MetaData, args []Value) Value {
 }
 
 func Set(Md *MetaData, args []Value) Value {
-	fmt.Println("Reached Set")
+	// fmt.Println("Reached Set")
 	key := args[0].Bulk
 	val := args[1].Bulk
 
 	switch len(args) {
 	case 2:
 		Md.Db.Set(key, []byte(val), -1)
-		fmt.Println("Key has been set")
+		fmt.Printf("Set : %v %v\n", key, val)
 		return Value{
 			Typ: StringType,
 			Str: "OK",
@@ -79,13 +79,13 @@ func Set(Md *MetaData, args []Value) Value {
 			}
 		}
 		Md.Db.Set(key, []byte(val), conv)
-		fmt.Println("Key with TTL has been set")
+		// fmt.Println("Key with TTL has been set")
 		return Value{
 			Typ: StringType,
 			Str: "OK",
 		}
 	default:
-		fmt.Println("Here ....... ")
+		// fmt.Println("Here ....... ")
 		return Value{
 			Typ: NULLType,
 			// Err: "Could not set the Value",
@@ -94,9 +94,9 @@ func Set(Md *MetaData, args []Value) Value {
 }
 
 func Get(Md *MetaData, args []Value) resp.Value {
-	fmt.Println("Reached Get")
+	// fmt.Println("Reached Get")
 	val, err := Md.Db.Get(args[0].Bulk)
-	fmt.Println(string(val))
+	fmt.Printf("Get %v: %v \n", args[0].Bulk, string(val))
 	if err != nil {
 		return Value{
 			Typ: NULLType,
@@ -109,7 +109,7 @@ func Get(Md *MetaData, args []Value) resp.Value {
 }
 
 func Info(Md *MetaData, args []Value) resp.Value {
-	fmt.Println("In Get Info")
+	// fmt.Println("In Get Info")
 	SubComm := strings.ToLower(args[0].Bulk)
 	switch SubComm {
 	case "replication":
@@ -123,8 +123,8 @@ func Info(Md *MetaData, args []Value) resp.Value {
 }
 
 func ReplConf(Md *MetaData, args []Value) Value {
-	fmt.Println("In Repl_Conf")
-	fmt.Println(args[0].Bulk)
+	// fmt.Println("In Repl_Conf")
+	// fmt.Println(args[0].Bulk)
 	switch args[0].Bulk {
 	case "listening-port":
 		Add_Slave := Value{
@@ -135,7 +135,7 @@ func ReplConf(Md *MetaData, args []Value) Value {
 				},
 			},
 		}
-		fmt.Println("Putting in the channel the command to add the slave")
+		// fmt.Println("Putting in the channel the command to add the slave")
 		go func() {
 			Md.Comm <- Client_Comm{
 				Comm:   Add_Slave,
@@ -143,7 +143,7 @@ func ReplConf(Md *MetaData, args []Value) Value {
 				Client: Md.Client,
 			}
 		}()
-		fmt.Println("added slave")
+		// fmt.Println("added slave")
 		return Value{
 			Typ: StringType,
 			Str: "OK",
@@ -166,7 +166,7 @@ func ReplConf(Md *MetaData, args []Value) Value {
 func Add_Slave(Md *MetaData, args []Value) Value {
 	*Md.Slaves = append(*Md.Slaves, *Md.RW)
 	Md.Ri.Connected_slaves++
-	fmt.Println(Md.Slaves)
+	// fmt.Println(Md.Slaves)
 	return Value{
 		Typ: StringType,
 		Str: "OK",
@@ -174,7 +174,7 @@ func Add_Slave(Md *MetaData, args []Value) Value {
 }
 
 func Psync(Md *MetaData, args []Value) Value {
-	fmt.Println("In Psync")
+	// fmt.Println("In Psync")
 	FullResyncComm := Value{
 		Typ: ArrayType,
 		Array: []Value{
@@ -197,6 +197,6 @@ func Psync(Md *MetaData, args []Value) Value {
 }
 
 func SendEmptyRDb(Md *MetaData, args []Value) Value {
-	fmt.Println("In Send Empty RDB")
+	// fmt.Println("In Send Empty RDB")
 	return Md.Ri.FullResync()
 }
