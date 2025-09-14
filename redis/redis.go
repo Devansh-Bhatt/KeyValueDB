@@ -7,11 +7,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/codecrafters-io/redis-starter-go/commands"
-	"github.com/codecrafters-io/redis-starter-go/repl"
-	"github.com/codecrafters-io/redis-starter-go/resp"
-	"github.com/codecrafters-io/redis-starter-go/store"
-	"github.com/codecrafters-io/redis-starter-go/util"
+	"keyvaldb/commands"
+
+	"keyvaldb/repl"
+	"keyvaldb/resp"
+	"keyvaldb/store"
+	"keyvaldb/util"
 )
 
 const (

@@ -6,10 +6,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/codecrafters-io/redis-starter-go/repl"
-	"github.com/codecrafters-io/redis-starter-go/resp"
-	. "github.com/codecrafters-io/redis-starter-go/resp"
-	"github.com/codecrafters-io/redis-starter-go/store"
+	"keyvaldb/repl"
+	"keyvaldb/resp"
+
+	. "keyvaldb/resp"
+	"keyvaldb/store"
 )
 
 type Client_Comm struct {
